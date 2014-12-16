@@ -1,0 +1,32 @@
+
+
+Resume/cover letter:
+I'm looking for summer opportunities that will let me work on technology that makes a life-changing impact on other people's lives. I believe technology should be used to help people who don't have access to money or opportunities, rather than just those who are well off, and I try to work on projects that reflect this :)
+
+I've experienced firsthand the benefits and opportunities unlocked by education and think that improving the accessibility and quality of education is one of the best ways to help those who need it most. I'd love to spend the summer trying to achieve
+this goal with Khan Academy.
+
+
+Links to projects:
+www.ideagarden.herokuapp.com
+
+Github:
+github.com/friendlymustache
+
+
+Is there anything else you'd like us to know about you?
+
+Just a quick description of the link I provided - Ideagarden is a  website I developed a while back with the intent of providing a platform (a forum + other tools) for high school students to engage with fellow students' ideas for impactful projects by requesting to join projects or providing feedback to help refine ideas.
+
+
+Tonight:
+- go back to avery at 6 and pack, get some food, go to chamber music by 6:40 or so.
+do you need anything? maybe check C-store for a smaller shaving cream container
+
+
+Questions:
+
+	-Engineering Qs:
+		- how to balance between redundancy of storage and cost of extra storage?
+		- is there any advantage to trying to predict the overall file size and changing block size accordingly?
+		
