@@ -10,10 +10,11 @@ import copy
 class Graph:
 	def __init__(self, users=None):
 		'''
-		self.users - a dict that maps user ids to users
+		Class intended to keep track of all users.
 		'''
 		self.max_id = 0
 		self.users = {} if users is None else users
+		self.update_cache = False
 
 	def add_edge(self, coach, student):
 		'''
@@ -22,8 +23,10 @@ class Graph:
 		'''
 		if coach.id not in student.coached_by:
 			student.coached_by[coach.id] = coach
+			self.update_cache = True
 		if student.id not in coach.students:
 			coach.students[student.id] = student
+			self.update_cache = True
 
 	def remove_edge(self, coach, student):
 		'''
@@ -33,6 +36,7 @@ class Graph:
 		if coach.id in student.coached_by:
 			student.coached_by.pop(coach.id)
 			coach.students.pop(student.id)
+			self.update_cache = True
 
 	def lookup_user(self, user_id):
 		'''
@@ -51,6 +55,7 @@ class Graph:
 		new_id = self.max_id + 1 
 		self.max_id += 1
 		self.users[new_id] = User(version, new_id, coaches, coached_by)
+		self.update_cache = True
 
 			
 	def remove_user(self, user):
@@ -66,6 +71,7 @@ class Graph:
 
 			# Remove user from graph
 			self.users.pop(user.id)
+			self.update_cache = True
 			return True
 		return False
 
@@ -175,13 +181,19 @@ class Graph:
 		that contains them. Each connected component is represented by one
 		user and so appears only once.
 		'''
-		user_to_size = {}
+
+		if not self.update_cache:
+			return self.cached_component_sizes
+
+		self.cached_component_sizes = {}
 		visited_users = {}
 		for user_id in self.users:
 			if user_id not in visited_users:
 				component_size = self.component_size(user_id, visited_users)	
-				user_to_size[user_id] = component_size
-		return user_to_size
+				self.cached_component_sizes[user_id] = component_size
+
+		self.update_cache = False
+		return self.cached_component_sizes
 
 
 	def total_infection_multiple(self, roots, version):
@@ -196,89 +208,121 @@ class Graph:
 		return num_infected
 
 	def subsets_to_infect(self, target, epsilon):
-		'''
-		Dynamic programming algorithm to determine which quantities
-		of infected users in the range [0, target + epsilon] can 
-		be obtained by totally infecting some set of connected
-		components.
 
-		Returns a dict mapping various integer sizes to lists of sets
-		of components that could be infected in order to infect a given
-		number of users.
+		users_to_sizes = self.get_component_sizes().items()
+		# Get a list of tuples of the form (user_id, component_size)
+		# sorted in decreasing order of component size
+		users_to_sizes.sort(key=lambda id_and_size: -id_and_size[1])
 
-		Output is sorted in increasing value of offset from target quantity.
-		'''
+		num_components = len(users_to_sizes)
 
-		users_to_sizes = self.get_component_sizes()
-		sizes_to_users = self.invert_dict(users_to_sizes)
+		# The entry at index i, j represents the existence of some subset
+		# of the first j components whose sizes sum up to i. If the entry
+		# is False, then no such subset exists. If the entry is a tuple,
+		# then some such subset does exist. 
 
-		# partial_sols maps each quantity in the range [0, target + epsilon]
-		# to a list of dictionaries. Each dictionary in the list corresponding
-		# to quantity q consists of user_ids whose connected components have
-		# sizes that sum up to q.
+		# The tuple will take the form (elem_included, prev_i, prev_j). 
+		# elem_included is a bool describing whether or not the jth
+		# component is included in our solution. prev_i and prev_j together
+		# represent the indices of some previously-computed solution 
+		# (prev_i <= i and prev_j < j) that can be extended to obtain 
+		# our current solution.
 
-		# We start off with the solution for the quantity 0 - there
-		# is one solution, consisting of an empty set of components, so we
-		# have a single-element list consisting of an empty dict.
-		partial_sols = {0: [{}] }
+		# If prev_i and prev_j are None, then our solution is either
+		# the jth component (if elem_incuded is True) or the empty set
+		# (if elem_included is False)
 
-		print "Getting data for range 1 through %s"%(target + epsilon)
-		for i in range(1, target + epsilon + 1):
-			print "--------Finding solutions for infecting %s users-----------"%i
-			possible_ways = []
-			for j in range(i):
-				difference = i - j
+		# Initialize all solutions to False (impossible)
+		num_rows = target + epsilon + 1
+		num_cols = num_components + 1
+		partial_sols = [[False] * num_cols for i in range(num_rows)]
 
+		# The empty set gives us a sum of 0
+		for j in range(num_components + 1):
+			partial_sols[0][j] = (False, None, None)
 
-				# Get all sets of components with sizes adding up to j
-				candidate_solutions = partial_sols[j]
-				print "Extending %s solutions for infecting %s users"%(len(candidate_solutions), j)
+		# For all target sums i
+		for i in range(1, target + 1):
+			for j in range(1, num_components + 1):
+				current_size = users_to_sizes[j - 1][1]
+				# Check if some subset of the first j - 1 components sum up to i
+				if partial_sols[i][j - 1]:
 
+					prev_solution = partial_sols[i][j - 1]
+					new_solution = (False, i, j - 1)
 
-				# Get all components with size i - j
-				if difference in sizes_to_users:
-					candidates = sizes_to_users[difference]
-				else:
-					candidates = []
+					partial_sols[i][j] = new_solution
 
-				print "# of components of size %s: %s"%(difference, len(candidates))
-				
-				# Extend each solution in <candidate_solutions> by adding
-				# an element of <candidates> if said element is not already
-				# in the solution being considered
-				for solution in candidate_solutions:
-					for candidate in candidates:
-						if candidate not in solution:
-							new_solution = copy.deepcopy(solution)
-							new_solution[candidate] = 1
-							possible_ways.append(new_solution)
-
-			partial_sols[i] = possible_ways
+				# Check if some subset of the first j - 1 components sum up to
+				# i - (size of jth component)
+				elif i >= current_size and partial_sols[i - current_size][j - 1]:
+					prev_solution = partial_sols[i - current_size][j - 1]
+					new_solution = (True, i - current_size, j - 1)
+					partial_sols[i][j] = new_solution
 		return partial_sols
+
+	def extract_solution(self, solution_table, target_quantity):
+		'''
+		Returns a list of user ids - each referenced user is contained in a
+		distinct connected component that should be infected in order to
+		infect a total of <target_quantity> users.
+
+		If such a solution does not exist, returns False.
+		'''
+
+		users_to_sizes = self.get_component_sizes().items()
+		
+		# Get a list of tuples of the form (user_id, component_size)
+		# sorted in decreasing order of component size
+		users_to_sizes.sort(key=lambda id_and_size: -id_and_size[1])
+
+		# Get a list of the user_ids in the above list of tuples
+		components = map(lambda component: component[0], users_to_sizes)
+		num_components = len(components)
+
+		i = target_quantity
+		j = num_components
+
+		if not solution_table[i][j]:
+			return False
+
+		to_infect = []
+		while solution_table[i][j] != (False, None, None):
+			elem_included, prev_i, prev_j = solution_table[i][j]
+			if elem_included:
+				to_infect.append(components[j - 1])
+			i = prev_i
+			j = prev_j
+		return to_infect
 
 
 	def _approximate_infection(self, target_quantity, epsilon):
 		'''
-		Returns the list of solutions (dicts of user ids, each of which represents a
-		connected component) whose size is closest to target_quantity. If no such
-		solution exists within a range of target_quantity +- epsilon, returns False
+		Returns a list of user ids - each referenced user is contained in a
+		distinct connected component that should be totally infected. We
+		return the list of ids that results in the infection of a number 
+		of users as close to <target_quantity> as possible. If we can't
+		infect any quantities within target_quantity +/- epsilon via the
+		total infection of some number of connected components, return False.
 		'''
 
-		# Get a dict mapping quantities to lists of solutions to the limited_infection
-		# problem for said quantity
+		solution_table = self.subsets_to_infect(target_quantity, epsilon)
 
-		quantity_to_solution = self.subsets_to_infect(target_quantity, epsilon)
-		# print "Solutions: %s"%quantity_to_solution
-		for i in range(epsilon + 1):
-			closest_lower_sum = target_quantity - epsilon
-			closest_upper_sum = target_quantity + epsilon
+		exact_solution = self.extract_solution(solution_table, target_quantity)
+		if exact_solution != False:
+			return exact_solution
 
-			if quantity_to_solution[closest_lower_sum] != []:
-				return quantity_to_solution[closest_lower_sum]
-			elif quantity_to_solution[closest_upper_sum] != []:
-				return partial_sols[closest_upper_sum]			
-		return False
+		for i in range(1, epsilon):
+			lower_target = target_quantity - epsilon
+			upper_target = target_quantity + epsilon
 
+			lower_sol = self.extract_solution(solution_table, lower_target)
+			if lower_sol:
+				return lower_sol
+
+			upper_sol = self.extract_solution(solution_table, upper_target)
+			if upper_sol:
+				return upper_sol
 
 	def approximate_infection(self, version, target_quantity, epsilon=None, subgraph_diversity=0):
 
@@ -299,15 +343,16 @@ class Graph:
 		if epsilon is None:
 			epsilon = target_quantity
 
-		# Get a list of possible solutions to our limited infection problem. If
-		# there were no such solutions, <candidate_solutions> will be false
-		candidate_solutions = self._approximate_infection(target_quantity, epsilon)
+		# Get a list of user_ids from distinct connected components upon which
+		# we should perform total infection in order to infect a quantity
+		# that is as close to <target_quantity> as possible. If no quantity
+		# within target_quantity +- epsilon can be achieved, <solution> will
+		# be False.
+		solution = self._approximate_infection(target_quantity, epsilon)
 
-
-		# If we had at least one solution, pick one at random and infect the
-		# components comprising the solution.
-		if candidate_solutions:
-			solution = random.choice(candidate_solutions)
+		# If we found a valid solution, perform total infection on the necessary
+		# components. Otherwise, return False.
+		if solution != False:
 			return self.total_infection_multiple(solution, version)
 		return False
 
@@ -318,8 +363,3 @@ class Graph:
 		infect exactly the target amount or nobody) and returns the result
 		'''
 		return self.approximate_infection(version, target_quantity, 0)
-
-
-if __name__ == "__main__":
-	print "Currently doing nothing - see if name == main yo"
-	
