@@ -4,10 +4,10 @@ class User:
 		Creates a new user object using the passed in version.
 		Stores adjacent students (people being coached by the current user)
 		and coaches (people who coach the current user) in two adjacency
-		dicts.
+		lists (represented by sets).
 		'''
 
 		self.id = user_id
-		self.students = {} if students is None else students
-		self.coached_by = {} if coached_by is None else coached_by	
+		self.students = set() if students is None else students
+		self.coached_by = set() if coached_by is None else coached_by	
 		self.version = version

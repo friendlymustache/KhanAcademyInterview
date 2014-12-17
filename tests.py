@@ -1,12 +1,11 @@
 import random
 import unittest
-from khan_academy import *
-MAX_USERS = 100
+from user_graph import *
+MAX_USERS = 10000
 
-class TestSequenceFunctions(unittest.TestCase):
+class TestInfectionFunctions(unittest.TestCase):
 
     def setUp(self):
-
         self.old_version = 1
         self.new_version = 2
 
@@ -33,7 +32,6 @@ class TestSequenceFunctions(unittest.TestCase):
 
 
     def setup_components(self):
-
         users = self.graph.users.values()
         random.shuffle(users)
 
@@ -66,7 +64,7 @@ class TestSequenceFunctions(unittest.TestCase):
             for i in range(1, len(component)):
                 current_user = component[i]
                 coach = random.choice(connected_users)
-                self.graph.add_edge(coach, current_user)
+                self.graph.add_edge(coach.id, current_user.id)
                 connected_users.append(current_user)
 
 
@@ -81,7 +79,6 @@ class TestSequenceFunctions(unittest.TestCase):
             user.version = version
 
     def test_total_infection(self):
-        
         # Set all users' version to <old_version>
         self.set_all_versions(self.old_version)
 
@@ -105,10 +102,6 @@ class TestSequenceFunctions(unittest.TestCase):
         self.set_all_versions(self.old_version)
 
     def test_limited_infection_simple(self):
-        '''
-        Tests limited_infection_simple.
-        '''
-
         # Set the version of all users to <old_version>
         self.set_all_versions(self.old_version)
 
@@ -132,10 +125,7 @@ class TestSequenceFunctions(unittest.TestCase):
         # Set the version of all users to <old_version>
         self.set_all_versions(self.old_version)
 
-
-
     def test_component_size(self):
-        # Test component_size()
         for component in self.components:
             size = len(component)            
             for user in component:
@@ -147,18 +137,13 @@ class TestSequenceFunctions(unittest.TestCase):
         known_sizes = sorted(self.component_to_size.values())
         self.assertEquals(sizes, known_sizes)        
 
-
     def test_exact_infection(self):
-        '''
-        Tests exact infection
-        '''
-
         # Set the version of all users to <old_version>
         self.set_all_versions(self.old_version)
 
         # Pick a random subset of connected components in the
         # graph and determine the number of contained users
-        subset_size = random.randint(0, min(self.num_components, 10))
+        subset_size = random.randint(0, self.num_components)
 
         indices = range(0, self.num_components)
         subset_indices = random.sample(indices, subset_size)
@@ -167,24 +152,14 @@ class TestSequenceFunctions(unittest.TestCase):
         components = [self.components[index] for index in subset_indices]
 
 
-        print "Num users is %s"%num_users
-        print "Subset size is %s"%subset_size
-
         # We should be able to infect <num_users> elements via total infection
         # by totally infecting the components in <components>
         
         num_infected = self.graph.exact_infection(num_users, self.new_version)
-        print "Infected %s, target was %s"%(num_infected, num_users)
-        # self.assertEquals(num_users, num_infected)
-
+        self.assertEquals(num_users, num_infected)
 
         # Set the version of all users to <old_version>
         self.set_all_versions(self.old_version)
-
-
-
-
-
 
 if __name__ == '__main__':
     unittest.main()
