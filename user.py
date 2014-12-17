@@ -11,3 +11,6 @@ class User:
 		self.students = set() if students is None else students
 		self.coached_by = set() if coached_by is None else coached_by	
 		self.version = version
+
+	def pprint(self):
+		print "User %s, version: %s\n"%(self.id, self.version)

@@ -1,6 +1,6 @@
 import random
 import unittest
-from user_graph import *
+from graph import *
 MAX_USERS = 10000
 
 class TestInfectionFunctions(unittest.TestCase):
@@ -66,12 +66,6 @@ class TestInfectionFunctions(unittest.TestCase):
                 coach = random.choice(connected_users)
                 self.graph.add_edge(coach.id, current_user.id)
                 connected_users.append(current_user)
-
-
-        user_ids = sorted(map(lambda x: x.id, users))
-        for i in range(len(user_ids) - 1):
-            assert( user_ids[i] + 1 == user_ids[i + 1] )
-
 
 
     def set_all_versions(self, version):

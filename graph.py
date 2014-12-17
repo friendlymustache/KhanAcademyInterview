@@ -8,8 +8,8 @@ class Graph:
 
 		Args:
 			users (dict): A dict mapping integer user IDs to user objects.
-			We use user IDs as keys in case we make future modifications to
-			the user class that makes user objects unhashable.
+			We use integer user IDs to reference users so that we can
+			easily adjust our system to work with a database.
 		'''
 
 		# ID to be assigned to the next user created
@@ -33,10 +33,17 @@ class Graph:
 			the coach of the User object with ID student_id.
 			student_id (int): The id of the User object being set as a
 			student of the abovementioned coach.
+
+		Returns:
+			True on success (the specified edge was added if it didn't already exist)
+			and False on failure (either the coach or student didn't exist)
 		'''
 		
 		coach = self.lookup_user(coach_id)
 		student = self.lookup_user(student_id)
+
+		if student is None or coach is None:
+			return False
 
 		if coach_id not in student.coached_by:
 			student.coached_by.add(coach_id)
@@ -44,6 +51,7 @@ class Graph:
 		if student_id not in coach.students:
 			coach.students.add(student_id)
 			self.update_cache = True
+		return True
 
 
 	def remove_edge(self, coach_id, student_id):
@@ -56,12 +64,26 @@ class Graph:
 			the coach of the User object with ID student_id.
 			student_id (int): The id of the User object being set as a
 			student of the abovementioned coach.
+
+		Returns:
+			True on success (the specified edge was removed if it existed)
+			and False on failure (either the coach or student didn't exist)			
 		'''
 
+		coach = self.lookup_user(coach_id)
+		student = self.lookup_user(student_id)
+
+		if student is None or coach is None:
+			return False
+
 		if coach_id in student.coached_by:
-			student.coached_by.remove(coach.id)
-			coach.students.pop(student.id)
+			student.coached_by.remove(coach_id)
 			self.update_cache = True
+		if student_id in coach.students:
+			coach.students.remove(student_id)
+			self.update_cache = True
+		return True
+
 
 	def lookup_user(self, user_id):
 		'''
@@ -88,13 +110,18 @@ class Graph:
 			version (int): The site version of the new user.
 			students (set): The IDs of users who are students of the new user
 			coached_by (set): The IDs of users who coach the new user
+		Returns:
+			The created user.
 		'''
 
 		new_id = self.next_user_id
-		self.next_user_id += 1
-		self.users[new_id] = User(version, new_id, students, coached_by)
+		new_user = User(version, new_id, students, coached_by)
+		self.users[new_id] = new_user
+
+		self.next_user_id += 1		
 		self.update_cache = True
 
+		return new_user
 			
 	def remove_user(self, user_id):
 		'''
@@ -115,7 +142,7 @@ class Graph:
 				student = self.lookup_user(student_id)
 				student.coached_by.remove(user_id)
 			for coach_id in user.coached_by:
-				coach = self.lookup_user(student_id)
+				coach = self.lookup_user(coach_id)
 				coach.students.remove(user_id)
 
 			# Remove user from graph
@@ -359,7 +386,7 @@ class Graph:
 		for j in range(num_components + 1):
 			partial_sols[0][j] = (False, None, None)
 
-		for i in range(1, target + 1):
+		for i in range(1, target + epsilon + 1):
 			for j in range(1, num_components + 1):
 				current_size = users_and_sizes[j - 1][1]
 
@@ -396,7 +423,6 @@ class Graph:
 
 			If such a solution does not exist, returns False.
 		'''
-
 		users_and_sizes = self.get_component_sizes_tuples()
 		components = map(lambda component: component[0], users_and_sizes)
 		num_components = len(components)
@@ -438,8 +464,8 @@ class Graph:
 		'''
 		solution_table = self.subsets_to_infect(target_quantity, epsilon)
 		for i in range(epsilon + 1):
-			lower_target = target_quantity - epsilon
-			upper_target = target_quantity + epsilon
+			lower_target = target_quantity - i
+			upper_target = target_quantity + i
 
 			lower_sol = self.extract_solution(solution_table, lower_target)
 			if lower_sol != False:
@@ -450,7 +476,7 @@ class Graph:
 				return upper_sol
 		return False
 
-	def approximate_infection(self, version, target_quantity, epsilon=None):
+	def approximate_infection(self, target_quantity, version, epsilon=None):
 
 		'''
 		Attempts to infect a number of users as close to a target quantity
@@ -502,4 +528,4 @@ class Graph:
 			The number of infected users if a solution was found, False
 			otherwise.
 		'''
-		return self.approximate_infection(version, target_quantity, 0)
+		return self.approximate_infection(target_quantity, version, 0)
