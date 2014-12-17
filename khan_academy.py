@@ -10,16 +10,35 @@ import copy
 class Graph:
 	def __init__(self, users=None):
 		'''
-		Class intended to keep track of all users.
+		Manages all users and their relationships to each other.
+
+		Args:
+			users (dict): A dict mapping integer user IDs to user objects.
+			We use user IDs as keys in case we make future modifications to
+			the user class that makes user objects unhashable.
 		'''
-		self.max_id = 0
+
+		# ID to be assigned to the next user created
+		self.next_user_id = 1
 		self.users = {} if users is None else users
-		self.update_cache = False
+
+		# A dict mapping the IDs of users contained within distinct
+		# connected components to the sizes of said components
+		self.cached_component_sizes = None
+
+		# Whether or not we need to update our cache of component sizes
+		self.update_cache = True
 
 	def add_edge(self, coach, student):
 		'''
-		Adds a coaching relationship between the user objects
-		<coach> and <student> if it does not already exist
+		Adds a coaching relationship between two user objects if it does not
+		already exist.
+
+		Args:
+			coach (User): A User object being set as the coach of <student>.
+			student (User): A User object being set as a student of <coach>.
+
+		Returns: None
 		'''
 		if coach.id not in student.coached_by:
 			student.coached_by[coach.id] = coach
@@ -30,8 +49,14 @@ class Graph:
 
 	def remove_edge(self, coach, student):
 		'''
-		Removes the coaching relationship (if it exists)
-		between the user objects <coach> and <student>
+		Removes the coaching relationship between two user objects if it
+		exists.
+
+		Args:
+			coach (User): A User object being removed as a coach of <student>.
+			student (User): A User object being removed as a student of <coach>.
+
+		Returns: None
 		'''
 		if coach.id in student.coached_by:
 			student.coached_by.pop(coach.id)
@@ -40,21 +65,32 @@ class Graph:
 
 	def lookup_user(self, user_id):
 		'''
-		Looks up a user using the provided user-id. Returns None
-		if no user is found
+		Looks up a user using the provided id.
+
+		Args:
+			user_id (int): The id of the user we're looking up
+
+		Returns:
+			The User object corresponding to the passed-in id, or None
+			if no such user exists.
 		'''
 		if user_id in self.users:
 			return self.users[user_id]
 		return None
 
-	def create_user(self, version, coaches=None, coached_by=None):
+	def create_user(self, version, students=None, coached_by=None):
 		'''
 		Creates and adds a new user with the specified attributes
 		to the graph 
+
+		Args:
+			version (int): The site version of the new user.
+			students (set): The IDs of users who are students of the new user
+			coached_by (set): The IDs of users who coach the new user
 		'''
-		new_id = self.max_id + 1 
-		self.max_id += 1
-		self.users[new_id] = User(version, new_id, coaches, coached_by)
+		new_id = self.next_user_id
+		self.next_user_id += 1
+		self.users[new_id] = User(version, new_id, students, coached_by)
 		self.update_cache = True
 
 			

@@ -80,7 +80,7 @@ class TestSequenceFunctions(unittest.TestCase):
         for user in self.graph.users.values():
             user.version = version
 
-    def etest_total_infection(self):
+    def test_total_infection(self):
         
         # Set all users' version to <old_version>
         self.set_all_versions(self.old_version)
@@ -104,7 +104,7 @@ class TestSequenceFunctions(unittest.TestCase):
         # Restore old version to all users
         self.set_all_versions(self.old_version)
 
-    def etest_limited_infection_simple(self):
+    def test_limited_infection_simple(self):
         '''
         Tests limited_infection_simple.
         '''
@@ -134,7 +134,7 @@ class TestSequenceFunctions(unittest.TestCase):
 
 
 
-    def etest_component_size(self):
+    def test_component_size(self):
         # Test component_size()
         for component in self.components:
             size = len(component)            
@@ -142,7 +142,7 @@ class TestSequenceFunctions(unittest.TestCase):
                 computed_size = self.graph.component_size(user.id)
                 self.assertEquals(computed_size, size)
 
-    def etest_get_component_sizes(self):
+    def test_get_component_sizes(self):
         sizes = sorted(self.graph.get_component_sizes().values())
         known_sizes = sorted(self.component_to_size.values())
         self.assertEquals(sizes, known_sizes)        
